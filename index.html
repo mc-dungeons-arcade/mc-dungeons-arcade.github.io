@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
+<title>Card Barcodes</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #0a0a0a;
+  --panel: #131313;
+  --panel-hover: #191919;
+  --border: #292929;
+  --text: #f0f0f0;
+  --muted: #929292;
+  --input: #181818;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button, input, select {
+  font: inherit;
+}
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #0a0a0af2;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  padding: calc(14px + env(safe-area-inset-top)) 14px 12px;
+}
+
+.header-inner, main {
+  width: min(920px, 100%);
+  margin: 0 auto;
+}
+
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+.subtitle, #count {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.search-wrap {
+  position: relative;
+}
+
+#search {
+  width: 100%;
+  height: 45px;
+  padding: 0 42px 0 14px;
+  color: var(--text);
+  background: var(--input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+}
+
+#search:focus {
+  border-color: #5c5c5c;
+}
+
+#clear {
+  display: none;
+  position: absolute;
+  right: 7px;
+  top: 6px;
+  width: 33px;
+  height: 33px;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+select {
+  width: 100%;
+  height: 41px;
+  padding: 0 10px;
+  color: var(--text);
+  background: var(--input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+}
+
+main {
+  padding: 14px 14px 30px;
+}
+
+#list {
+  display: grid;
+  gap: 8px;
+}
+
+.card {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 12px;
+  min-height: 72px;
+  padding: 11px 13px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.card:hover {
+  background: var(--panel-hover);
+}
+
+.card:active {
+  transform: translateY(1px);
+}
+
+.number {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  color: #d0d0d0;
+  background: #1b1b1b;
+  border: 1px solid #303030;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.meta {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.chevron {
+  color: #696969;
+  font-size: 24px;
+}
+
+#empty {
+  display: none;
+  padding: 60px 10px;
+  color: var(--muted);
+  text-align: center;
+}
+
+#viewer {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow: auto;
+  background: var(--bg);
+}
+
+#viewer.open {
+  display: block;
+}
+
+.viewer-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: calc(10px + env(safe-area-inset-top)) 12px 10px;
+  background: #0a0a0af2;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+
+.back {
+  width: 42px;
+  height: 42px;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 21px;
+}
+
+.viewer-heading {
+  min-width: 0;
+}
+
+#viewerName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+#viewerNumber {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.viewer-body {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: 16px 14px calc(30px + env(safe-area-inset-bottom));
+}
+
+.barcode-box {
+  display: grid;
+  place-items: center;
+  min-height: 310px;
+  padding: 18px;
+  background: white;
+  border-radius: 8px;
+}
+
+#barcodeImage {
+  display: block;
+  width: 100%;
+  max-width: 680px;
+  max-height: 62vh;
+  object-fit: contain;
+}
+
+.details {
+  margin-top: 12px;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.detail {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.detail:last-child {
+  border-bottom: 0;
+}
+
+.detail span:first-child {
+  color: var(--muted);
+}
+
+.detail span:last-child {
+  text-align: right;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.navigation {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.navigation button {
+  height: 46px;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.navigation button:disabled {
+  opacity: .35;
+}
+
+@media (min-width: 700px) {
+  #list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="title-row">
+      <div>
+        <h1>Card Barcodes</h1>
+        <div class="subtitle">Minecraft Dungeons collection</div>
+      </div>
+      <div id="count"></div>
+    </div>
+
+    <div class="search-wrap">
+      <input id="search" type="search" placeholder="Search cards" autocomplete="off">
+      <button id="clear" aria-label="Clear search">×</button>
+    </div>
+
+    <div class="filters">
+      <select id="classFilter" aria-label="Filter by class"></select>
+      <select id="rarityFilter" aria-label="Filter by rarity"></select>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="list"></div>
+  <div id="empty">No matching cards.</div>
+</main>
+
+<section id="viewer">
+  <div class="viewer-header">
+    <button class="back" id="back" aria-label="Back">←</button>
+    <div class="viewer-heading">
+      <div id="viewerName"></div>
+      <div id="viewerNumber"></div>
+    </div>
+  </div>
+
+  <div class="viewer-body">
+    <div class="barcode-box">
+      <img id="barcodeImage" alt="Barcode">
+    </div>
+
+    <div class="details">
+      <div class="detail"><span>Card number</span><span id="detailNumber"></span></div>
+      <div class="detail"><span>Class</span><span id="detailClass"></span></div>
+      <div class="detail"><span>Rarity</span><span id="detailRarity"></span></div>
+      <div class="detail"><span>Barcode data</span><span id="detailBarcode"></span></div>
+    </div>
+
+    <div class="navigation">
+      <button id="previous">← Previous</button>
+      <button id="next">Next →</button>
+    </div>
+  </div>
+</section>
+
+<script>
+const cards = [{"number": 1, "name": "Sun's Grace", "barcode": "a0000000", "class": "Melee", "rarity": "Common", "image": "001_Sun's_Grace_a0000000.svg"}, {"number": 2, "name": "Grave Bane", "barcode": "a0010000", "class": "Melee", "rarity": "Common", "image": "002_Grave_Bane_a0010000.svg"}, {"number": 3, "name": "Stormlander", "barcode": "a0020000", "class": "Melee", "rarity": "Rare", "image": "003_Stormlander_a0020000.svg"}, {"number": 4, "name": "Heartstealer", "barcode": "a0030000", "class": "Melee", "rarity": "Unique", "image": "004_Heartstealer_a0030000.svg"}, {"number": 5, "name": "Nameless Blade", "barcode": "a0040000", "class": "Melee", "rarity": "Rare", "image": "005_Nameless_Blade_a0040000.svg"}, {"number": 6, "name": "Firebrand", "barcode": "a0050000", "class": "Melee", "rarity": "Rare", "image": "006_Firebrand_a0050000.svg"}, {"number": 7, "name": "Soul Fists", "barcode": "a0060000", "class": "Melee", "rarity": "Common", "image": "007_Soul_Fists_a0060000.svg"}, {"number": 8, "name": "Frost Scythe", "barcode": "a0070000", "class": "Melee", "rarity": "Rare", "image": "008_Frost_Scythe_a0070000.svg"}, {"number": 9, "name": "Master's Katana", "barcode": "a0080000", "class": "Melee", "rarity": "Unique", "image": "009_Master's_Katana_a0080000.svg"}, {"number": 10, "name": "Cursed Axe", "barcode": "a0090000", "class": "Melee", "rarity": "Unique", "image": "010_Cursed_Axe_a0090000.svg"}, {"number": 11, "name": "Flail", "barcode": "a00a0000", "class": "Melee", "rarity": "Common", "image": "011_Flail_a00a0000.svg"}, {"number": 12, "name": "Broadsword", "barcode": "a00b0000", "class": "Melee", "rarity": "Common", "image": "012_Broadsword_a00b0000.svg"}, {"number": 13, "name": "Nightmare's Bite", "barcode": "a00c0000", "class": "Melee", "rarity": "Unique", "image": "013_Nightmare's_Bite_a00c0000.svg"}, {"number": 14, "name": "Moon Daggers", "barcode": "a00d0000", "class": "Melee", "rarity": "Unique", "image": "014_Moon_Daggers_a00d0000.svg"}, {"number": 15, "name": "Fortune Spear", "barcode": "a00e0000", "class": "Melee", "rarity": "Rare", "image": "015_Fortune_Spear_a00e0000.svg"}, {"number": 16, "name": "Twin Bow", "barcode": "a10f0000", "class": "Range", "rarity": "Common", "image": "016_Twin_Bow_a10f0000.svg"}, {"number": 17, "name": "Red Snake", "barcode": "a10g0000", "class": "Range", "rarity": "Common", "image": "017_Red_Snake_a10g0000.svg"}, {"number": 18, "name": "Sabrewing", "barcode": "a10h0000", "class": "Range", "rarity": "Common", "image": "018_Sabrewing_a10h0000.svg"}, {"number": 19, "name": "The Pink Scoundrel", "barcode": "a10i0000", "class": "Range", "rarity": "Unique", "image": "019_The_Pink_Scoundrel_a10i0000.svg"}, {"number": 20, "name": "Corrupted Beacon", "barcode": "a10j0000", "class": "Range", "rarity": "Unique", "image": "020_Corrupted_Beacon_a10j0000.svg"}, {"number": 21, "name": "Auto Crossbow", "barcode": "a10k0000", "class": "Range", "rarity": "Unique", "image": "021_Auto_Crossbow_a10k0000.svg"}, {"number": 22, "name": "Firebolt Thrower", "barcode": "a10l0000", "class": "Range", "rarity": "Rare", "image": "022_Firebolt_Thrower_a10l0000.svg"}, {"number": 23, "name": "Guardian Bow", "barcode": "a10m0000", "class": "Range", "rarity": "Rare", "image": "023_Guardian_Bow_a10m0000.svg"}, {"number": 24, "name": "Lightning Harp Crossbow", "barcode": "a10n0000", "class": "Range", "rarity": "Rare", "image": "024_Lightning_Harp_Crossbow_a10n0000.svg"}, {"number": 25, "name": "The Green Menace", "barcode": "a10o0000", "class": "Range", "rarity": "Rare", "image": "025_The_Green_Menace_a10o0000.svg"}, {"number": 26, "name": "Imploding Crossbow", "barcode": "a10p0000", "class": "Range", "rarity": "Unique", "image": "026_Imploding_Crossbow_a10p0000.svg"}, {"number": 27, "name": "Harp Crossbow", "barcode": "a10q0000", "class": "Range", "rarity": "Common", "image": "027_Harp_Crossbow_a10q0000.svg"}, {"number": 28, "name": "Souldancer Robe", "barcode": "a20r0000", "class": "Armor", "rarity": "Common", "image": "028_Souldancer_Robe_a20r0000.svg"}, {"number": 29, "name": "Battle Robe", "barcode": "a20s0000", "class": "Armor", "rarity": "Common", "image": "029_Battle_Robe_a20s0000.svg"}, {"number": 30, "name": "Wolf Armor", "barcode": "a20t0000", "class": "Armor", "rarity": "Common", "image": "030_Wolf_Armor_a20t0000.svg"}, {"number": 31, "name": "Grim Armor", "barcode": "a20u0000", "class": "Armor", "rarity": "Common", "image": "031_Grim_Armor_a20u0000.svg"}, {"number": 32, "name": "Highland Armor", "barcode": "a20v0000", "class": "Armor", "rarity": "Common", "image": "032_Highland_Armor_a20v0000.svg"}, {"number": 33, "name": "Renegade Armor", "barcode": "a20w0000", "class": "Armor", "rarity": "Rare", "image": "033_Renegade_Armor_a20w0000.svg"}, {"number": 34, "name": "Spider Armor", "barcode": "a20x0000", "class": "Armor", "rarity": "Rare", "image": "034_Spider_Armor_a20x0000.svg"}, {"number": 35, "name": "Full Metal Armor", "barcode": "a20y0000", "class": "Armor", "rarity": "Rare", "image": "035_Full_Metal_Armor_a20y0000.svg"}, {"number": 36, "name": "Ember Robe", "barcode": "a20z0000", "class": "Armor", "rarity": "Rare", "image": "036_Ember_Robe_a20z0000.svg"}, {"number": 37, "name": "Ender Armor", "barcode": "a20A0000", "class": "Armor", "rarity": "Unique", "image": "037_Ender_Armor_a20A0000.svg"}, {"number": 38, "name": "Titan's Shroud", "barcode": "a20B0000", "class": "Armor", "rarity": "Unique", "image": "038_Titan's_Shroud_a20B0000.svg"}, {"number": 39, "name": "Frost Bite", "barcode": "a20C0000", "class": "Armor", "rarity": "Unique", "image": "039_Frost_Bite_a20C0000.svg"}, {"number": 40, "name": "Hero's Armor", "barcode": "a20D0000", "class": "Armor", "rarity": "Unique", "image": "040_Hero's_Armor_a20D0000.svg"}, {"number": 41, "name": "Morris", "barcode": "a30E0000", "class": "Hero", "rarity": "Rare", "image": "041_Morris_a30E0000.svg"}, {"number": 42, "name": "Elaine", "barcode": "a30F0000", "class": "Hero", "rarity": "Unique", "image": "042_Elaine_a30F0000.svg"}, {"number": 43, "name": "Valorie", "barcode": "a30G0000", "class": "Hero", "rarity": "Common", "image": "043_Valorie_a30G0000.svg"}, {"number": 44, "name": "Violet", "barcode": "a30H0000", "class": "Hero", "rarity": "Common", "image": "044_Violet_a30H0000.svg"}, {"number": 45, "name": "Ivy", "barcode": "a30I0000", "class": "Hero", "rarity": "Rare", "image": "045_Ivy_a30I0000.svg"}, {"number": 46, "name": "Meadow", "barcode": "a40J0000", "class": "Hero", "rarity": "Unique", "image": "046_Meadow_a40J0000.svg"}, {"number": 47, "name": "Sven", "barcode": "a40K0000", "class": "Hero", "rarity": "Common", "image": "047_Sven_a40K0000.svg"}, {"number": 48, "name": "Sam", "barcode": "a40L0000", "class": "Hero", "rarity": "Common", "image": "048_Sam_a40L0000.svg"}, {"number": 49, "name": "Elan", "barcode": "a40M0000", "class": "Hero", "rarity": "Common", "image": "049_Elan_a40M0000.svg"}, {"number": 50, "name": "Ebo", "barcode": "a30N0000", "class": "Hero", "rarity": "Rare", "image": "050_Ebo_a30N0000.svg"}, {"number": 51, "name": "Frisk", "barcode": "a30O0000", "class": "Hero", "rarity": "Unique", "image": "051_Frisk_a30O0000.svg"}, {"number": 52, "name": "Adriene", "barcode": "a30P0000", "class": "Hero", "rarity": "Rare", "image": "052_Adriene_a30P0000.svg"}, {"number": 53, "name": "Wolf", "barcode": "a40Q0000", "class": "Pet", "rarity": "Rare", "image": "053_Wolf_a40Q0000.svg"}, {"number": 54, "name": "Polar Bear", "barcode": "a40R0000", "class": "Pet", "rarity": "Unique", "image": "054_Polar_Bear_a40R0000.svg"}, {"number": 55, "name": "Pig", "barcode": "a40S0000", "class": "Pet", "rarity": "Common", "image": "055_Pig_a40S0000.svg"}, {"number": 56, "name": "Llama", "barcode": "a40T0000", "class": "Pet", "rarity": "Rare", "image": "056_Llama_a40T0000.svg"}, {"number": 57, "name": "Fox", "barcode": "a40U0000", "class": "Pet", "rarity": "Common", "image": "057_Fox_a40U0000.svg"}, {"number": 58, "name": "Panda", "barcode": "a40V0000", "class": "Pet", "rarity": "Unique", "image": "058_Panda_a40V0000.svg"}, {"number": 59, "name": "Ocelot", "barcode": "a40W0000", "class": "Pet", "rarity": "Rare", "image": "059_Ocelot_a40W0000.svg"}, {"number": 60, "name": "Chicken", "barcode": "a40X0000", "class": "Pet", "rarity": "Common", "image": "060_Chicken_a40X0000.svg"}, {"number": 61, "name": "Encrusted Anchor", "barcode": "b00Y0000", "class": "Melee", "rarity": "Unique", "image": "061_Encrusted_Anchor_b00Y0000.svg"}, {"number": 62, "name": "Battlestaff of Terror", "barcode": "b00Z0000", "class": "Melee", "rarity": "Unique", "image": "062_Battlestaff_of_Terror_b00Z0000.svg"}, {"number": 63, "name": "Hawkbrand", "barcode": "b0100000", "class": "Melee", "rarity": "Common", "image": "063_Hawkbrand_b0100000.svg"}, {"number": 64, "name": "Sponge Striker", "barcode": "b0110000", "class": "Melee", "rarity": "Rare", "image": "064_Sponge_Striker_b0110000.svg"}, {"number": 65, "name": "The Last Laugh", "barcode": "b0120000", "class": "Melee", "rarity": "Rare", "image": "065_The_Last_Laugh_b0120000.svg"}, {"number": 66, "name": "Vine Whip", "barcode": "b0130000", "class": "Melee", "rarity": "Rare", "image": "066_Vine_Whip_b0130000.svg"}, {"number": 67, "name": "Whirlwind", "barcode": "b0140000", "class": "Melee", "rarity": "Common", "image": "067_Whirlwind_b0140000.svg"}, {"number": 68, "name": "Whispering Spear", "barcode": "b0150000", "class": "Melee", "rarity": "Common", "image": "068_Whispering_Spear_b0150000.svg"}, {"number": 69, "name": "Bubble Burster", "barcode": "b1160000", "class": "Range", "rarity": "Common", "image": "069_Bubble_Burster_b1160000.svg"}, {"number": 70, "name": "Nautical Crossbow", "barcode": "b1170000", "class": "Range", "rarity": "Common", "image": "070_Nautical_Crossbow_b1170000.svg"}, {"number": 71, "name": "Web Bow", "barcode": "b1180000", "class": "Range", "rarity": "Rare", "image": "071_Web_Bow_b1180000.svg"}, {"number": 72, "name": "Bonebow", "barcode": "b1190000", "class": "Range", "rarity": "Common", "image": "072_Bonebow_b1190000.svg"}, {"number": 73, "name": "Purple Storm", "barcode": "b11a0000", "class": "Range", "rarity": "Rare", "image": "073_Purple_Storm_b11a0000.svg"}, {"number": 74, "name": "Soul Hunter Crossbow", "barcode": "b11b0000", "class": "Range", "rarity": "Common", "image": "074_Soul_Hunter_Crossbow_b11b0000.svg"}, {"number": 75, "name": "Spellbound Crossbows", "barcode": "b21c0000", "class": "Range", "rarity": "Rare", "image": "075_Spellbound_Crossbows_b21c0000.svg"}, {"number": 76, "name": "Eye of the Guardian", "barcode": "b21d0000", "class": "Range", "rarity": "Unique", "image": "076_Eye_of_the_Guardian_b21d0000.svg"}, {"number": 77, "name": "Squid Armor", "barcode": "b21e0000", "class": "Armor", "rarity": "Rare", "image": "077_Squid_Armor_b21e0000.svg"}, {"number": 78, "name": "Glow Squid Armor", "barcode": "b21f0000", "class": "Armor", "rarity": "Unique", "image": "078_Glow_Squid_Armor_b21f0000.svg"}, {"number": 79, "name": "Nimble Turtle Armor", "barcode": "b21g0000", "class": "Armor", "rarity": "Rare", "image": "079_Nimble_Turtle_Armor_b21g0000.svg"}, {"number": 80, "name": "Archer's Armor", "barcode": "b21h0000", "class": "Armor", "rarity": "Common", "image": "080_Archer's_Armor_b21h0000.svg"}, {"number": 81, "name": "Ghost Kingler", "barcode": "b21i0000", "class": "Armor", "rarity": "Unique", "image": "081_Ghost_Kingler_b21i0000.svg"}, {"number": 82, "name": "Phantom Armor", "barcode": "b21j0000", "class": "Armor", "rarity": "Rare", "image": "082_Phantom_Armor_b21j0000.svg"}, {"number": 83, "name": "Stalwart Armor", "barcode": "b31m0000", "class": "Armor", "rarity": "Common", "image": "083_Stalwart_Armor_b31m0000.svg"}, {"number": 84, "name": "Fox Armor", "barcode": "b31m0000", "class": "Armor", "rarity": "Common", "image": "083_Stalwart_Armor_b31m0000.svg"}, {"number": 85, "name": "The Archeologist", "barcode": "b31m0000", "class": "Hero", "rarity": "Rare", "image": "083_Stalwart_Armor_b31m0000.svg"}, {"number": 86, "name": "Baako", "barcode": "b31n0000", "class": "Hero", "rarity": "Common", "image": "086_Baako_b31n0000.svg"}, {"number": 87, "name": "Dani", "barcode": "b31o0000", "class": "Hero", "rarity": "Rare", "image": "087_Dani_b31o0000.svg"}, {"number": 88, "name": "Darian", "barcode": "b31p0000", "class": "Hero", "rarity": "Common", "image": "088_Darian_b31p0000.svg"}, {"number": 89, "name": "Fuego", "barcode": "b31q0000", "class": "Hero", "rarity": "Common", "image": "089_Fuego_b31q0000.svg"}, {"number": 90, "name": "The Kelptomaniac", "barcode": "b31r0000", "class": "Hero", "rarity": "Unique", "image": "090_The_Kelptomaniac_b31r0000.svg"}, {"number": 91, "name": "The Monumental", "barcode": "b31s0000", "class": "Hero", "rarity": "Unique", "image": "091_The_Monumental_b31s0000.svg"}, {"number": 92, "name": "Wargen", "barcode": "b31t0000", "class": "Hero", "rarity": "Rare", "image": "092_Wargen_b31t0000.svg"}, {"number": 93, "name": "Sheep", "barcode": "b41u0000", "class": "Pet", "rarity": "Common", "image": "093_Sheep_b41u0000.svg"}, {"number": 94, "name": "Rabbit", "barcode": "b41v0000", "class": "Pet", "rarity": "Common", "image": "094_Rabbit_b41v0000.svg"}, {"number": 95, "name": "Goat", "barcode": "b41w0000", "class": "Pet", "rarity": "Rare", "image": "095_Goat_b41w0000.svg"}, {"number": 96, "name": "Bee", "barcode": "b41x0000", "class": "Pet", "rarity": "Rare", "image": "096_Bee_b41x0000.svg"}, {"number": 97, "name": "Baby Turtle", "barcode": "b41y0000", "class": "Pet", "rarity": "Unique", "image": "097_Baby_Turtle_b41y0000.svg"}, {"number": 98, "name": "Iron Golem", "barcode": "b41z0000", "class": "Pet", "rarity": "Unique", "image": "098_Iron_Golem_b41z0000.svg"}, {"number": 99, "name": "The Kelptomaniac", "barcode": "c01A1000", "class": "Hero", "rarity": "Unique", "image": "099_The_Kelptomaniac_Hero_c01A1000.svg"}, {"number": 100, "name": "Explorer", "barcode": "c01B1000", "class": "Hero", "rarity": "Unique", "image": "100_Explorer_Hero_c01B1000.svg"}, {"number": 101, "name": "Valorie", "barcode": "c01C1000", "class": "Hero", "rarity": "Rare", "image": "101_Valorie_Hero_c01C1000.svg"}, {"number": 102, "name": "Strider Warrior", "barcode": "c01D1000", "class": "Hero", "rarity": "Unique", "image": "102_Strider_Warrior_Hero_c01D1000.svg"}, {"number": 103, "name": "Darian", "barcode": "c01E1000", "class": "Hero", "rarity": "Rare", "image": "103_Darian_Hero_c01E1000.svg"}, {"number": 104, "name": "Loge", "barcode": "c01F1000", "class": "Hero", "rarity": "Unique", "image": "104_Loge_Hero_c01F1000.svg"}, {"number": 105, "name": "Skelly", "barcode": "c01G1000", "class": "Hero", "rarity": "Unique", "image": "105_Skelly_Hero_c01G1000.svg"}, {"number": 106, "name": "Wargen", "barcode": "c01H1000", "class": "Hero", "rarity": "Unique", "image": "106_Wargen_Hero_c01H1000.svg"}, {"number": 107, "name": "Annika", "barcode": "c01I1000", "class": "Hero", "rarity": "Unique", "image": "107_Annika_Hero_c01I1000.svg"}, {"number": 108, "name": "Dani", "barcode": "c01J1000", "class": "Hero", "rarity": "Unique", "image": "108_Dani_Hero_c01J1000.svg"}, {"number": 109, "name": "Frosty", "barcode": "c01K1000", "class": "Hero", "rarity": "Unique", "image": "109_Frosty_Hero_c01K1000.svg"}, {"number": 110, "name": "Sven", "barcode": "c01L1000", "class": "Hero", "rarity": "Unique", "image": "110_Sven_Hero_c01L1000.svg"}, {"number": 111, "name": "Nuru", "barcode": "c01M1000", "class": "Hero", "rarity": "Unique", "image": "111_Nuru_Hero_c01M1000.svg"}, {"number": 112, "name": "Ivy", "barcode": "c01N1000", "class": "Hero", "rarity": "Unique", "image": "112_Ivy_Hero_c01N1000.svg"}, {"number": 113, "name": "Corrupted Defender", "barcode": "c01O1000", "class": "Hero", "rarity": "Unique", "image": "113_Corrupted_Defender_Hero_c01O1000.svg"}, {"number": 114, "name": "Void Voyager", "barcode": "c01P1000", "class": "Hero", "rarity": "Unique", "image": "114_Void_Voyager_Hero_c01P1000.svg"}, {"number": 115, "name": "Qamar", "barcode": "c01Q1000", "class": "Hero", "rarity": "Unique", "image": "115_Qamar_Hero_c01Q1000.svg"}, {"number": 116, "name": "Sam", "barcode": "c01R1000", "class": "Hero", "rarity": "Unique", "image": "116_Sam_Hero_c01R1000.svg"}, {"number": 117, "name": "The Monumental", "barcode": "c01S1000", "class": "Hero", "rarity": "Unique", "image": "117_The_Monumental_Hero_c01S1000.svg"}, {"number": 118, "name": "Eshe", "barcode": "c01T1000", "class": "Hero", "rarity": "Unique", "image": "118_Eshe_Hero_c01T1000.svg"}, {"number": 119, "name": "Eternal Knife", "barcode": "d01U0000", "class": "Melee", "rarity": "Common", "image": "119_Eternal_Knife_d01U0000.svg"}, {"number": 120, "name": "Bee Stinger", "barcode": "d01V0000", "class": "Melee", "rarity": "Common", "image": "120_Bee_Stinger_d01V0000.svg"}, {"number": 121, "name": "Highland Axe", "barcode": "d01W0000", "class": "Melee", "rarity": "Rare", "image": "121_Highland_Axe_d01W0000.svg"}, {"number": 122, "name": "Diamond Pickaxe", "barcode": "d01X0000", "class": "Melee", "rarity": "Unique", "image": "122_Diamond_Pickaxe_d01X0000.svg"}, {"number": 123, "name": "Sugar Rush", "barcode": "d11Y0000", "class": "Range", "rarity": "Unique", "image": "123_Sugar_Rush_d11Y0000.svg"}, {"number": 124, "name": "Slayer Crossbow", "barcode": "d11Z0000", "class": "Range", "rarity": "Common", "image": "124_Slayer_Crossbow_d11Z0000.svg"}, {"number": 125, "name": "Elite Power Bow", "barcode": "d1200000", "class": "Range", "rarity": "Common", "image": "125_Elite_Power_Bow_d1200000.svg"}, {"number": 126, "name": "Phantom Bow", "barcode": "d1210000", "class": "Range", "rarity": "Rare", "image": "126_Phantom_Bow_d1210000.svg"}, {"number": 127, "name": "Hungry Horror", "barcode": "d2220000", "class": "Armor", "rarity": "Unique", "image": "127_Hungry_Horror_d2220000.svg"}, {"number": 128, "name": "Wither Armor", "barcode": "d2230000", "class": "Armor", "rarity": "Rare", "image": "128_Wither_Armor_d2230000.svg"}, {"number": 129, "name": "Black Wolf Armor", "barcode": "d2240000", "class": "Armor", "rarity": "Unique", "image": "129_Black_Wolf_Armor_d2240000.svg"}, {"number": 130, "name": "Evocation Robe", "barcode": "d2250000", "class": "Armor", "rarity": "Common", "image": "130_Evocation_Robe_d2250000.svg"}, {"number": 131, "name": "Loge", "barcode": "d3260000", "class": "Hero", "rarity": "Rare", "image": "131_Loge_d3260000.svg"}, {"number": 132, "name": "Annika", "barcode": "d3270000", "class": "Hero", "rarity": "Rare", "image": "132_Annika_d3270000.svg"}, {"number": 133, "name": "Igor", "barcode": "d3280000", "class": "Hero", "rarity": "Common", "image": "133_Igor_d3280000.svg"}, {"number": 134, "name": "Tim", "barcode": "d3290000", "class": "Hero", "rarity": "Unique", "image": "134_Tim_d3290000.svg"}, {"number": 135, "name": "Blue Sheep", "barcode": "d42a0000", "class": "Pet", "rarity": "Rare", "image": "135_Blue_Sheep_d42a0000.svg"}, {"number": 136, "name": "Cow", "barcode": "d42b0000", "class": "Pet", "rarity": "Common", "image": "136_Cow_d42b0000.svg"}, {"number": 137, "name": "Cat", "barcode": "d42c0000", "class": "Pet", "rarity": "Common", "image": "137_Cat_d42c0000.svg"}, {"number": 138, "name": "Llama", "barcode": "d02d1000", "class": "Hero", "rarity": "Unique", "image": "138_Llama_Hero_d02d1000.svg"}, {"number": 139, "name": "Mayeso", "barcode": "d02e1000", "class": "Hero", "rarity": "Unique", "image": "139_Mayeso_Hero_d02e1000.svg"}, {"number": 140, "name": "Pake", "barcode": "d02f1000", "class": "Hero", "rarity": "Unique", "image": "140_Pake_Hero_d02f1000.svg"}, {"number": 141, "name": "Annika", "barcode": "d02g1000", "class": "Hero", "rarity": "Unique", "image": "141_Annika_Hero_d02g1000.svg"}, {"number": 142, "name": "The Archeologist", "barcode": "d02h1000", "class": "Hero", "rarity": "Unique", "image": "142_The_Archeologist_Hero_d02h1000.svg"}, {"number": 143, "name": "Fuego", "barcode": "d02i1000", "class": "Hero", "rarity": "Unique", "image": "143_Fuego_Hero_d02i1000.svg"}, {"number": 144, "name": "Chicken Jockey", "barcode": "e42j0000", "class": "Pet", "rarity": "Legendary", "image": "144_Chicken_Jockey_e42j0000.svg"}];
+
+const state = {
+  query: "",
+  className: "All classes",
+  rarity: "All rarities",
+  filtered: [],
+  selected: -1
+};
+
+const search = document.getElementById("search");
+const clear = document.getElementById("clear");
+const classFilter = document.getElementById("classFilter");
+const rarityFilter = document.getElementById("rarityFilter");
+const list = document.getElementById("list");
+const empty = document.getElementById("empty");
+const count = document.getElementById("count");
+const viewer = document.getElementById("viewer");
+const barcodeImage = document.getElementById("barcodeImage");
+
+function fillSelect(select, first, values) {
+  select.innerHTML = "";
+  [first, ...values].forEach(value => {
+    const option = document.createElement("option");
+    option.textContent = value;
+    option.value = value;
+    select.appendChild(option);
+  });
+}
+
+fillSelect(classFilter, "All classes", [...new Set(cards.map(c => c.class))]);
+fillSelect(rarityFilter, "All rarities", [...new Set(cards.map(c => c.rarity))]);
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  })[char]);
+}
+
+function render() {
+  const q = state.query.trim().toLowerCase();
+
+  state.filtered = cards.filter(card => {
+    const searchMatch =
+      !q ||
+      card.name.toLowerCase().includes(q) ||
+      String(card.number).includes(q) ||
+      card.barcode.toLowerCase().includes(q);
+
+    const classMatch =
+      state.className === "All classes" || card.class === state.className;
+
+    const rarityMatch =
+      state.rarity === "All rarities" || card.rarity === state.rarity;
+
+    return searchMatch && classMatch && rarityMatch;
+  });
+
+  list.innerHTML = "";
+
+  for (const [index, card] of state.filtered.entries()) {
+    const item = document.createElement("div");
+    item.className = "card";
+    item.innerHTML = `
+      <div class="number">${String(card.number).padStart(3, "0")}</div>
+      <div>
+        <div class="name">${escapeHtml(card.name)}</div>
+        <div class="meta">${escapeHtml(card.class)} · ${escapeHtml(card.rarity)}</div>
+      </div>
+      <div class="chevron">›</div>
+    `;
+    item.addEventListener("click", () => openCard(index));
+    list.appendChild(item);
+  }
+
+  count.textContent = `${state.filtered.length} cards`;
+  empty.style.display = state.filtered.length ? "none" : "block";
+}
+
+function setCard(index) {
+  const card = state.filtered[index];
+  if (!card) return;
+
+  state.selected = index;
+
+  document.getElementById("viewerName").textContent = card.name;
+  document.getElementById("viewerNumber").textContent =
+    `Card ${String(card.number).padStart(3, "0")}`;
+
+  document.getElementById("detailNumber").textContent = card.number;
+  document.getElementById("detailClass").textContent = card.class;
+  document.getElementById("detailRarity").textContent = card.rarity;
+  document.getElementById("detailBarcode").textContent = card.barcode;
+
+  // SVGs are normal local image files. encodeURI preserves path separators
+  // while safely handling spaces and apostrophes in filenames.
+  barcodeImage.src = encodeURI(`barcode_images/${card.image}`);
+
+  document.getElementById("previous").disabled = index === 0;
+  document.getElementById("next").disabled =
+    index === state.filtered.length - 1;
+}
+
+function openCard(index) {
+  setCard(index);
+  viewer.classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+
+function closeCard() {
+  viewer.classList.remove("open");
+  document.body.style.overflow = "";
+}
+
+search.addEventListener("input", () => {
+  state.query = search.value;
+  clear.style.display = search.value ? "block" : "none";
+  render();
+});
+
+clear.addEventListener("click", () => {
+  search.value = "";
+  state.query = "";
+  clear.style.display = "none";
+  render();
+  search.focus();
+});
+
+classFilter.addEventListener("change", () => {
+  state.className = classFilter.value;
+  render();
+});
+
+rarityFilter.addEventListener("change", () => {
+  state.rarity = rarityFilter.value;
+  render();
+});
+
+document.getElementById("back").addEventListener("click", closeCard);
+document.getElementById("previous").addEventListener("click", () => {
+  if (state.selected > 0) setCard(state.selected - 1);
+});
+document.getElementById("next").addEventListener("click", () => {
+  if (state.selected < state.filtered.length - 1) setCard(state.selected + 1);
+});
+
+document.addEventListener("keydown", event => {
+  if (!viewer.classList.contains("open")) return;
+  if (event.key === "Escape") closeCard();
+  if (event.key === "ArrowLeft" && state.selected > 0) setCard(state.selected - 1);
+  if (event.key === "ArrowRight" && state.selected < state.filtered.length - 1) {
+    setCard(state.selected + 1);
+  }
+});
+
+render();
+</script>
+</body>
+</html>
